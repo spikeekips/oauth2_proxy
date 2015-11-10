@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/mreiferson/go-options"
 )
 
 func main() {
@@ -113,6 +112,17 @@ func main() {
 			log.Fatalf("FATAL: unable to open %s %s", opts.HtpasswdFile, err)
 		}
 	}
+
+	oauthproxy.Env = map[string]string{}
+	for _, i := range os.Environ() {
+		if !strings.HasPrefix(i, "OP_") {
+			continue
+		}
+
+		s := strings.SplitN(i, "=", 2)
+		oauthproxy.Env[s[0]] = s[1]
+	}
+	log.Printf("got environment variables: %s", oauthproxy.Env)
 
 	s := &Server{
 		Handler: LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging),
