@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	options "github.com/mreiferson/go-options"
 )
 
 func main() {
