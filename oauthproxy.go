@@ -332,7 +332,11 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	p.ClearCookie(rw, req)
 	rw.WriteHeader(code)
 
-	redirect_url := req.URL.RequestURI()
+	redirect_url := req.FormValue("rd")
+	if redirect_url == "" {
+		redirect_url = req.URL.RequestURI()
+	}
+
 	if redirect_url == p.SignInPath {
 		redirect_url = "/"
 	}
@@ -502,10 +506,18 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request) {
 	status := p.Authenticate(rw, req)
 	if status == http.StatusAccepted {
+		if user := req.Header.Get("X-Forwarded-User"); user != "" {
+			rw.Header().Set("X-Forwarded-User", user)
+		}
+		if email := req.Header.Get("X-Forwarded-Email"); email != "" {
+			rw.Header().Set("X-Forwarded-Email", email)
+		}
+
 		rw.WriteHeader(http.StatusAccepted)
 	} else {
 		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
 	}
+
 }
 
 func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
