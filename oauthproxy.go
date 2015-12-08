@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/18F/hmacauth"
-	"github.com/bitly/oauth2_proxy/cookie"
-	"github.com/bitly/oauth2_proxy/providers"
+	"github.com/spikeekips/oauth2_proxy/cookie"
+	"github.com/spikeekips/oauth2_proxy/providers"
 )
 
 const SignatureHeader = "GAP-Signature"
@@ -51,21 +51,22 @@ type OAuthProxy struct {
 	OAuthCallbackPath string
 	AuthOnlyPath      string
 
-	redirectURL         *url.URL // the url to receive requests at
-	provider            providers.Provider
-	ProxyPrefix         string
-	SignInMessage       string
-	HtpasswdFile        *HtpasswdFile
-	DisplayHtpasswdForm bool
-	serveMux            http.Handler
-	PassBasicAuth       bool
-	BasicAuthPassword   string
-	PassAccessToken     bool
-	CookieCipher        *cookie.Cipher
-	skipAuthRegex       []string
-	compiledRegex       []*regexp.Regexp
-	templates           *template.Template
-	Env                 map[string]string
+	redirectURL          *url.URL // the url to receive requests at
+	provider             providers.Provider
+	ProxyPrefix          string
+	SignInMessage        string
+	HtpasswdFile         *HtpasswdFile
+	DisplayHtpasswdForm  bool
+	serveMux             http.Handler
+	PassBasicAuth        bool
+	BasicAuthPassword    string
+	PassAccessToken      bool
+	PassExternalRedirect bool
+	CookieCipher         *cookie.Cipher
+	skipAuthRegex        []string
+	compiledRegex        []*regexp.Regexp
+	templates            *template.Template
+	Env                  map[string]string
 }
 
 type UpstreamProxy struct {
@@ -187,17 +188,18 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		OAuthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
 
-		ProxyPrefix:       opts.ProxyPrefix,
-		provider:          opts.provider,
-		serveMux:          serveMux,
-		redirectURL:       redirectURL,
-		skipAuthRegex:     opts.SkipAuthRegex,
-		compiledRegex:     opts.CompiledRegex,
-		PassBasicAuth:     opts.PassBasicAuth,
-		BasicAuthPassword: opts.BasicAuthPassword,
-		PassAccessToken:   opts.PassAccessToken,
-		CookieCipher:      cipher,
-		templates:         loadTemplates(opts.CustomTemplatesDir),
+		ProxyPrefix:          opts.ProxyPrefix,
+		provider:             opts.provider,
+		serveMux:             serveMux,
+		redirectURL:          redirectURL,
+		skipAuthRegex:        opts.SkipAuthRegex,
+		compiledRegex:        opts.CompiledRegex,
+		PassBasicAuth:        opts.PassBasicAuth,
+		BasicAuthPassword:    opts.BasicAuthPassword,
+		PassAccessToken:      opts.PassAccessToken,
+		PassExternalRedirect: opts.PassExternalRedirect,
+		CookieCipher:         cipher,
+		templates:            loadTemplates(opts.CustomTemplatesDir),
 	}
 }
 
@@ -455,6 +457,9 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		p.ErrorPage(rw, 500, "Internal Error", err.Error())
 		return
+	}
+	if !p.PassExternalRedirect && !strings.HasPrefix(redirect, "/") {
+		redirect = ""
 	}
 	redirectURI := p.GetRedirectURI(req.Host)
 	http.Redirect(rw, req, p.provider.GetLoginURL(redirectURI, redirect), 302)

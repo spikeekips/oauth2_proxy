@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bitly/oauth2_proxy/cookie"
+	"github.com/spikeekips/oauth2_proxy/cookie"
 )
 
 func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err error) {
@@ -83,14 +83,9 @@ func (p *ProviderData) GetLoginURL(redirectURI, finalRedirect string) string {
 	params.Add("scope", p.Scope)
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "code")
-	params.Add("state", finalRedirect)
-	/*
-		if strings.HasPrefix(finalRedirect, "/") {
-			params.Add("state", finalRedirect)
-		}
-	*/
-	params.Add("state", finalRedirect)
-	params.Add("state", finalRedirect)
+	if finalRedirect != "" {
+		params.Add("state", finalRedirect)
+	}
 
 	a.RawQuery = params.Encode()
 	return a.String()

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/18F/hmacauth"
-	"github.com/bitly/oauth2_proxy/providers"
+	"github.com/spikeekips/oauth2_proxy/providers"
 )
 
 // Configuration Options that can be set by Command Line Flag, or Config File
@@ -43,12 +43,13 @@ type Options struct {
 	CookieSecure   bool          `flag:"cookie-secure" cfg:"cookie_secure"`
 	CookieHttpOnly bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
 
-	Upstreams         []string `flag:"upstream" cfg:"upstreams"`
-	SkipAuthRegex     []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
-	PassBasicAuth     bool     `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
-	BasicAuthPassword string   `flag:"basic-auth-password" cfg:"basic_auth_password"`
-	PassAccessToken   bool     `flag:"pass-access-token" cfg:"pass_access_token"`
-	PassHostHeader    bool     `flag:"pass-host-header" cfg:"pass_host_header"`
+	Upstreams            []string `flag:"upstream" cfg:"upstreams"`
+	SkipAuthRegex        []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
+	PassBasicAuth        bool     `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
+	BasicAuthPassword    string   `flag:"basic-auth-password" cfg:"basic_auth_password"`
+	PassAccessToken      bool     `flag:"pass-access-token" cfg:"pass_access_token"`
+	PassHostHeader       bool     `flag:"pass-host-header" cfg:"pass_host_header"`
+	PassExternalRedirect bool     `flag:"pass-external-redirect" cfg:"pass_external_redirect"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.

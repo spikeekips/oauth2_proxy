@@ -71,6 +71,8 @@ func main() {
 
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 
+	flagSet.Bool("pass-external-redirect", false, "allow the external domain for redirection after authentication")
+
 	flagSet.Parse(os.Args[1:])
 
 	if *showVersion {
