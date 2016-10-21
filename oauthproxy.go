@@ -493,7 +493,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	redirect := req.Form.Get("state")
-	if !strings.HasPrefix(redirect, "/") {
+	if !p.PassExternalRedirect && !strings.HasPrefix(redirect, "/") {
 		redirect = "/"
 	}
 
