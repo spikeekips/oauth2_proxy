@@ -17,7 +17,7 @@ to validate accounts by email, domain or group.
 
 ## Installation
 
-1. Download [Prebuilt Binary](https://github.com/bitly/oauth2_proxy/releases) (current release is `v2.0.1`) or build with `$ go get github.com/bitly/oauth2_proxy` which will put the binary in `$GOROOT/bin`
+1. Download [Prebuilt Binary](https://github.com/bitly/oauth2_proxy/releases) (current release is `v2.1`) or build with `$ go get github.com/bitly/oauth2_proxy` which will put the binary in `$GOROOT/bin`
 2. Select a Provider and Register an OAuth Application with a Provider
 3. Configure OAuth2 Proxy using config file, command line options, or environment variables
 4. Configure SSL or Deploy behind a SSL endpoint (example provided for Nginx)
@@ -29,7 +29,10 @@ You will need to register an OAuth application with a Provider (Google, Github o
 Valid providers are :
 
 * [Google](#google-auth-provider) *default*
+* [Azure](#azure-auth-provider)
+* [Facebook](#facebook-auth-provider)
 * [GitHub](#github-auth-provider)
+* [GitLab](#gitlab-auth-provider)
 * [LinkedIn](#linkedin-auth-provider)
 * [MyUSA](#myusa-auth-provider)
 
@@ -40,13 +43,18 @@ The provider can be selected using the `provider` configuration value.
 For Google, the registration steps are:
 
 1. Create a new project: https://console.developers.google.com/project
-2. Under "APIs & Auth", choose "Credentials"
-3. Now, choose "Create new Client ID"
-   * The Application Type should be **Web application** and click **Configure Consent Screen**
-   * Fill out the appropriate details on the Consent Screen page and hit **Save**
-   * On the next screen, leaving **Web Application** checked, enter your domain in the Authorized Javascript Origins `https://internal.yourcompany.com`
-   * Enter the correct Authorized Redirect URL `https://internal.yourcompany.com/oauth2/callback`
-     * NOTE: `oauth2_proxy` will _only_ callback on the path `/oauth2/callback`
+2. Choose the new project from the top right project dropdown (only if another project is selected)
+3. In the project Dashboard center pane, choose **"Enable and manage APIs"**
+4. In the left Nav pane, choose **"Credentials"**
+5. In the center pane, choose **"OAuth consent screen"** tab. Fill in **"Product name shown to users"** and hit save.
+6. In the center pane, choose **"Credentials"** tab.
+   * Open the **"New credentials"** drop down
+   * Choose **"OAuth client ID"**
+   * Choose **"Web application"**
+   * Application name is freeform, choose something appropriate
+   * Authorized JavaScript origins is your domain ex: `https://internal.yourcompany.com`
+   * Authorized redirect URIs is the location of oath2/callback ex: `https://internal.yourcompany.com/oauth2/callback`
+   * Choose **"Create"**
 4. Take note of the **Client ID** and **Client Secret**
 
 It's recommended to refresh sessions on a short interval (1h) with `cookie-refresh` setting which validates that the account is still authorized.
@@ -71,6 +79,20 @@ and the user will be checked against all the provided groups.
 
 Note: The user is checked against the group members list on initial authentication and every time the token is refreshed ( about once an hour ).
 
+### Azure Auth Provider
+
+1. [Add an application](https://azure.microsoft.com/en-us/documentation/articles/active-directory-integrating-applications/) to your Azure Active Directory tenant.
+2. On the App properties page provide the correct Sign-On URL ie `https://internal.yourcompany.com/oauth2/callback`
+3. If applicable take note of your `TenantID` and provide it via the `--azure-tenant=<YOUR TENANT ID>` commandline option. Default the `common` tenant is used.
+
+The Azure AD auth provider uses `openid` as it default scope. It uses `https://graph.windows.net` as a default protected resource. It call to `https://graph.windows.net/me` to get the email address of the user that logs in.
+
+
+### Facebook Auth Provider
+
+1. Create a new FB App from <https://developers.facebook.com/>
+2. Under FB Login, set your Valid OAuth redirect URIs to `https://internal.yourcompany.com/oauth2/callback`
+
 ### GitHub Auth Provider
 
 1. Create a new project: https://github.com/settings/developers
@@ -79,7 +101,23 @@ Note: The user is checked against the group members list on initial authenticati
 The GitHub auth provider supports two additional parameters to restrict authentication to Organization or Team level access. Restricting by org and team is normally accompanied with `--email-domain=*`
 
     -github-org="": restrict logins to members of this organisation
-    -github-team="": restrict logins to members of this team
+    -github-team="": restrict logins to members of any of these teams, separated by a comma
+
+If you are using GitHub enterprise, make sure you set the following to the appropriate url:
+
+    -login-url="http(s)://<enterprise github host>/login/oauth/authorize"
+    -redeem-url="http(s)://<enterprise github host>/login/oauth/access_token"
+    -validate-url="http(s)://<enterprise github host>/api/v3"
+
+### GitLab Auth Provider
+
+Whether you are using GitLab.com or self-hosting GitLab, follow [these steps to add an application](http://doc.gitlab.com/ce/integration/oauth_provider.html)
+
+If you are using self-hosted GitLab, make sure you set the following to the appropriate URL:
+
+    -login-url="<your gitlab url>/oauth/authorize"
+    -redeem-url="<your gitlab url>/oauth/token"
+    -validate-url="<your gitlab url>/api/v3/user"
 
 
 ### LinkedIn Auth Provider
@@ -97,13 +135,21 @@ For LinkedIn, the registration steps are:
 
 The [MyUSA](https://alpha.my.usa.gov) authentication service ([GitHub](https://github.com/18F/myusa))
 
+### Microsoft Azure AD Provider
+
+For adding an application to the Microsoft Azure AD follow [these steps to add an application](https://azure.microsoft.com/en-us/documentation/articles/active-directory-integrating-applications/).
+
+Take note of your `TenantId` if applicable for your situation. The `TenantId` can be used to override the default `common` authorization server with a tenant specific server.
+
 ## Email Authentication
 
-To authorize by email domain use `--email-domain=yourcompany.com`. To authorize individual email addresses use `--authenticated-emails-file=/path/to/file` with one email per line. To authorize all email addresse use `--email-domain=*`.
+To authorize by email domain use `--email-domain=yourcompany.com`. To authorize individual email addresses use `--authenticated-emails-file=/path/to/file` with one email per line. To authorize all email addresses use `--email-domain=*`.
 
 ## Configuration
 
 `oauth2_proxy` can be configured via [config file](#config-file), [command line options](#command-line-options) or [environment variables](#environment-variables).
+
+To generate a strong cookie secret use `python -c 'import os,base64; print base64.b64encode(os.urandom(16))'`
 
 ### Config File
 
@@ -115,6 +161,7 @@ An example [oauth2_proxy.cfg](contrib/oauth2_proxy.cfg.example) config file is i
 Usage of oauth2_proxy:
   -approval-prompt="force": Oauth approval_prompt
   -authenticated-emails-file="": authenticate against emails via file (one per line)
+  -azure-tenant="common": go to a tenant-specific or common (tenant-independent) endpoint.
   -basic-auth-password="": the password to set when passing the HTTP Basic Auth header
   -client-id="": the OAuth Client ID: ie: "123456.apps.googleusercontent.com"
   -client-secret="": the OAuth Client Secret
@@ -146,10 +193,12 @@ Usage of oauth2_proxy:
   -proxy-prefix="/oauth2": the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in)
   -redeem-url="": Token redemption endpoint
   -redirect-url="": the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
+  -resource="": the resource that is being protected. ie: "https://graph.windows.net". Currently only used in the Azure provider.
   -request-logging=true: Log requests to stdout
   -scope="": Oauth scope specification
   -signature-key="": GAP-Signature request signature key (algorithm:secretkey)
   -skip-auth-regex=: bypass authentication for requests path's that match (may be given multiple times)
+  -skip-provider-button=false: will skip sign-in-page to directly reach the next step: oauth/start
   -tls-cert="": path to certificate file
   -tls-key="": path to private key file
   -upstream=: the http url(s) of the upstream endpoint or file:// paths for static files. Routing is based on the path
@@ -169,7 +218,16 @@ Multiple upstreams can either be configured by supplying a comma separated list 
 
 ### Environment variables
 
-The environment variables `OAUTH2_PROXY_CLIENT_ID`, `OAUTH2_PROXY_CLIENT_SECRET`, `OAUTH2_PROXY_COOKIE_SECRET`, `OAUTH2_PROXY_COOKIE_DOMAIN` and `OAUTH2_PROXY_COOKIE_EXPIRE` can be used in place of the corresponding command-line arguments.
+The following environment variables can be used in place of the corresponding command-line arguments:
+
+- `OAUTH2_PROXY_CLIENT_ID`
+- `OAUTH2_PROXY_CLIENT_SECRET`
+- `OAUTH2_PROXY_COOKIE_NAME`
+- `OAUTH2_PROXY_COOKIE_SECRET`
+- `OAUTH2_PROXY_COOKIE_DOMAIN`
+- `OAUTH2_PROXY_COOKIE_EXPIRE`
+- `OAUTH2_PROXY_COOKIE_REFRESH`
+- `OAUTH2_PROXY_SIGNATURE_KEY`
 
 ## SSL Configuration
 
@@ -293,19 +351,23 @@ server {
   server_name ...;
   include ssl/ssl.conf;
 
-  location = /auth {
+  location = /oauth2/auth {
     internal;
     proxy_pass http://127.0.0.1:4180;
   }
 
+  location /oauth2/ {
+    proxy_pass http://127.0.0.1:4180;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Scheme $scheme;
+  }
+
   location / {
-    auth_request /auth;
-    error_page 401 = ...;
+    auth_request /oauth2/auth;
+    error_page 401 = https://example.com/oauth2/sign_in;
 
     root /path/to/the/site;
-    default_type text/html;
-    charset utf-8;
-    charset_types application/json utf-8;
   }
 }
 ```
